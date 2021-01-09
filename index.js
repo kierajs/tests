@@ -1,8 +1,9 @@
 const inq = require('inquirer')
 const fs = require('fs')
 const { createCipher } = require('crypto')
+const { fail } = require('assert')
 const testCases = new Map()
-const testCasesNames = []
+let testCasesNames = []
 
 const caseFiles = fs.readdirSync('./cases').filter(f => f.endsWith('.case.js'))
 for(const testCase of caseFiles) {
@@ -27,6 +28,7 @@ if(testCasesNames.length) {
 
       // Check for requiredPackages
       if(tc.requiredPackages.length) {
+        let failedPackages = []
         for(const package of tc.requiredPackages) {
           const testDeps = require('./package.json').dependencies
           const testDevDeps = require('./package.json').devDependencies
@@ -37,19 +39,24 @@ if(testCasesNames.length) {
             if(package.split('/').length > 1) {
               const packageDir = fs.readdirSync(package.split('/')[0]).find(x => x == package.split('/')[1])
               if(!packageDir) {
-                console.log(`Required package (${package}) not found. Please install.`)
-                process.exit()
+                failedPackages.push(package)       
               } else continue
             } else {
               const packageDir = fs.readdirSync(package).find(x => x == package)
               if(!packageDir) {
-                console.log(`Required package (${package}) not found. Please install.`)
-                process.exit()
+                failedPackages.push(package)
               } else continue
             }
           } catch(e) {
+            failedPackages.push(package)
+          }
+        }
+
+        if(failedPackages.length) {
+          for(const failed of failedPackages) {
             console.log(`Required package (${package}) not found. Please install.`)
           }
+          process.exit()
         }
       }
 
